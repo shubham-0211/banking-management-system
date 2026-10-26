@@ -7,9 +7,12 @@ import com.banking.backend.service.CustomerService;
 
 import jakarta.validation.Valid;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/customers")
@@ -47,6 +50,28 @@ public class CustomerController {
     public CustomerResponse getCustomerById(@PathVariable Long id) {
         Customer customer = customerService.getCustomerById(id);
         return toResponse(customer);
+    }
+
+    @GetMapping
+    public Map<String, Object> getCustomers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Page<Customer> customerPage =
+            customerService.getCustomers(page, size);
+
+        return Map.of(
+            "customers", customerPage.getContent()
+                .stream()
+                .map(this::toResponse)
+                .toList(),
+            "currentPage", customerPage.getNumber(),
+            "pageSize", customerPage.getSize(),
+            "totalElements", customerPage.getTotalElements(),
+            "totalPages", customerPage.getTotalPages(),
+            "first", customerPage.isFirst(),
+            "last", customerPage.isLast()
+        );
     }
 
     private CustomerResponse toResponse(Customer customer) {
