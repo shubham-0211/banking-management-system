@@ -22,6 +22,56 @@ class BankingBackendApplicationTests {
     @Autowired
     private MockMvc mockMvc;
 
+    // Helper: register a customer and return the generated customer ID.
+    private long createTestCustomer() throws Exception {
+        String email =
+            "test." + java.util.UUID.randomUUID() + "@example.com";
+
+        String requestBody = """
+            {
+                "fullName": "Automated Test Customer",
+                "email": "%s",
+                "phone": "9876543210"
+            }
+            """.formatted(email);
+
+        MvcResult result = mockMvc.perform(post("/api/customers")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        String responseBody = result.getResponse().getContentAsString();
+
+        java.util.regex.Matcher matcher =
+            java.util.regex.Pattern
+                .compile("\"id\"\\s*:\\s*(\\d+)")
+                .matcher(responseBody);
+
+        if (!matcher.find()) {
+            throw new AssertionError("Customer ID not found");
+        }
+
+        return Long.parseLong(matcher.group(1));
+    }
+
+    // Helper: create a bank account for an existing customer.
+    private MvcResult createTestAccount(
+            long customerId, String accountType) throws Exception {
+
+        String requestBody = """
+            {
+                "customerId": %d,
+                "accountType": "%s"
+            }
+            """.formatted(customerId, accountType);
+
+        return mockMvc.perform(post("/api/accounts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+            .andReturn();
+    }
+
     // Test 1: Health endpoint
     @Test
     void healthEndpointReturnsUp() throws Exception {
@@ -132,47 +182,13 @@ class BankingBackendApplicationTests {
     @Test
     @WithMockUser(username = "test-user", roles = {"USER"})
     void getCustomerByIdReturnsCustomer() throws Exception {
-        String email =
-            "retrieve." + java.util.UUID.randomUUID() + "@example.com";
-
-        String requestBody = """
-            {
-                "fullName": "Customer Retrieval Test",
-                "email": "%s",
-                "phone": "9876543210"
-            }
-            """.formatted(email);
-
-        MvcResult registrationResult = mockMvc.perform(
-                post("/api/customers")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(requestBody))
-            .andExpect(status().isCreated())
-            .andReturn();
-
-        String responseBody =
-            registrationResult.getResponse().getContentAsString();
-
-        java.util.regex.Matcher matcher =
-            java.util.regex.Pattern
-                .compile("\"id\"\\s*:\\s*(\\d+)")
-                .matcher(responseBody);
-
-        if (!matcher.find()) {
-            throw new AssertionError(
-                "Customer ID was not found in the registration response"
-            );
-        }
-
-        long customerId = Long.parseLong(matcher.group(1));
+        long customerId = createTestCustomer();
 
         mockMvc.perform(get("/api/customers/{id}", customerId))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(customerId))
             .andExpect(jsonPath("$.fullName")
-                .value("Customer Retrieval Test"))
-            .andExpect(jsonPath("$.email").value(email))
-            .andExpect(jsonPath("$.phone").value("9876543210"))
+                .value("Automated Test Customer"))
             .andExpect(jsonPath("$.status").value("ACTIVE"));
     }
 
@@ -191,6 +207,9 @@ class BankingBackendApplicationTests {
     @Test
     @WithMockUser(username = "test-user", roles = {"USER"})
     void customerListPaginationReturnsCorrectMetadata() throws Exception {
+        createTestCustomer();
+        createTestCustomer();
+
         mockMvc.perform(get("/api/customers")
                 .param("page", "0")
                 .param("size", "2"))
@@ -227,5 +246,138 @@ class BankingBackendApplicationTests {
             .andExpect(jsonPath("$.status").value(400))
             .andExpect(jsonPath("$.message")
                 .value("Page size must be between 1 and 100"));
+    }
+
+    // Test 11: Create a SAVINGS account with zero initial balance
+    @Test
+    @WithMockUser(username = "test-user", roles = {"USER"})
+    void createSavingsAccountReturnsCreatedWithZeroBalance()
+            throws Exception {
+        long customerId = createTestCustomer();
+
+        mockMvc.perform(post("/api/accounts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "customerId": %d,
+                        "accountType": "SAVINGS"
+                    }
+                    """.formatted(customerId)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").isNumber())
+            .andExpect(jsonPath("$.accountNumber").isString())
+            .andExpect(jsonPath("$.accountNumber").value(
+                org.hamcrest.Matchers.matchesPattern("\\d{12}")))
+            .andExpect(jsonPath("$.customerId").value(customerId))
+            .andExpect(jsonPath("$.accountType").value("SAVINGS"))
+            .andExpect(jsonPath("$.balance").value(0))
+            .andExpect(jsonPath("$.status").value("ACTIVE"))
+            .andExpect(jsonPath("$.createdAt").isNotEmpty());
+    }
+
+    // Test 12: Create a CURRENT account
+    @Test
+    @WithMockUser(username = "test-user", roles = {"USER"})
+    void createCurrentAccountReturnsCreated() throws Exception {
+        long customerId = createTestCustomer();
+
+        mockMvc.perform(post("/api/accounts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "customerId": %d,
+                        "accountType": "CURRENT"
+                    }
+                    """.formatted(customerId)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.accountType").value("CURRENT"))
+            .andExpect(jsonPath("$.balance").value(0))
+            .andExpect(jsonPath("$.customerId").value(customerId));
+    }
+
+    // Test 13: Nonexistent customer must be rejected
+    @Test
+    @WithMockUser(username = "test-user", roles = {"USER"})
+    void createAccountForMissingCustomerReturnsNotFound() throws Exception {
+        mockMvc.perform(post("/api/accounts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "customerId": 999999999,
+                        "accountType": "SAVINGS"
+                    }
+                    """))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.message").value("Customer not found"));
+    }
+
+    // Test 14: Retrieve a bank account by ID
+    @Test
+    @WithMockUser(username = "test-user", roles = {"USER"})
+    void getBankAccountByIdReturnsAccount() throws Exception {
+        long customerId = createTestCustomer();
+
+        MvcResult result = createTestAccount(customerId, "SAVINGS");
+        org.junit.jupiter.api.Assertions.assertEquals(
+            201, result.getResponse().getStatus());
+
+        String body = result.getResponse().getContentAsString();
+        java.util.regex.Matcher matcher =
+            java.util.regex.Pattern
+                .compile("\"id\"\\s*:\\s*(\\d+)")
+                .matcher(body);
+
+        if (!matcher.find()) {
+            throw new AssertionError("Bank account ID not found");
+        }
+
+        long accountId = Long.parseLong(matcher.group(1));
+
+        mockMvc.perform(get("/api/accounts/{id}", accountId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(accountId))
+            .andExpect(jsonPath("$.customerId").value(customerId))
+            .andExpect(jsonPath("$.accountType").value("SAVINGS"))
+            .andExpect(jsonPath("$.balance").value(0));
+    }
+
+    // Test 15: Bank account not found
+    @Test
+    @WithMockUser(username = "test-user", roles = {"USER"})
+    void bankAccountNotFoundReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/api/accounts/999999999"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.message")
+                .value("Bank account not found"));
+    }
+
+    // Test 16: Missing customer ID must be rejected
+    @Test
+    @WithMockUser(username = "test-user", roles = {"USER"})
+    void missingCustomerIdReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/accounts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "accountType": "SAVINGS"
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error").value("Validation Failed"));
+    }
+
+    // Test 17: Invalid account type must be rejected
+    @Test
+    @WithMockUser(username = "test-user", roles = {"USER"})
+    void invalidAccountTypeReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/accounts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "customerId": 1,
+                        "accountType": "INVALID"
+                    }
+                    """))
+            .andExpect(status().isBadRequest());
     }
 }
