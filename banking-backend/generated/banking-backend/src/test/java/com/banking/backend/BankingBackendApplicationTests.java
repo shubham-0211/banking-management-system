@@ -1,4 +1,3 @@
-
 package com.banking.backend;
 
 import org.junit.jupiter.api.Test;
@@ -379,5 +378,70 @@ class BankingBackendApplicationTests {
                     }
                     """))
             .andExpect(status().isBadRequest());
+    }
+
+    // Test 18: Retrieve all accounts belonging to a customer.
+    @Test
+    @WithMockUser(username = "test-user", roles = {"USER"})
+    void getAccountsByCustomerIdReturnsAllCustomerAccounts()
+            throws Exception {
+
+        long customerId = createTestCustomer();
+
+        MvcResult savingsResult =
+            createTestAccount(customerId, "SAVINGS");
+        org.junit.jupiter.api.Assertions.assertEquals(
+            201, savingsResult.getResponse().getStatus());
+
+        MvcResult currentResult =
+            createTestAccount(customerId, "CURRENT");
+        org.junit.jupiter.api.Assertions.assertEquals(
+            201, currentResult.getResponse().getStatus());
+
+        mockMvc.perform(
+                get("/api/accounts/customer/{customerId}", customerId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[0].customerId").value(customerId))
+            .andExpect(jsonPath("$[1].customerId").value(customerId));
+    }
+
+    // Test 19: Existing customer with no accounts receives an empty list.
+    @Test
+    @WithMockUser(username = "test-user", roles = {"USER"})
+    void getAccountsByCustomerIdReturnsEmptyListWhenNoAccounts()
+            throws Exception {
+
+        long customerId = createTestCustomer();
+
+        mockMvc.perform(
+                get("/api/accounts/customer/{customerId}", customerId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    // Test 20: Nonexistent customer returns 404.
+    @Test
+    @WithMockUser(username = "test-user", roles = {"USER"})
+    void getAccountsByCustomerIdReturnsNotFoundForMissingCustomer()
+            throws Exception {
+
+        mockMvc.perform(get("/api/accounts/customer/999999999"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.status").value(404))
+            .andExpect(jsonPath("$.message").value("Customer not found"));
+    }
+
+    // Test 21: Customer ID zero returns 400.
+    @Test
+    @WithMockUser(username = "test-user", roles = {"USER"})
+    void getAccountsByCustomerIdRejectsInvalidCustomerId()
+            throws Exception {
+
+        mockMvc.perform(get("/api/accounts/customer/0"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.message")
+                .value("Customer ID must be positive"));
     }
 }

@@ -6,6 +6,7 @@ import com.banking.backend.dto.BankAccountResponse;
 import com.banking.backend.entity.BankAccount;
 import com.banking.backend.service.BankAccountService;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,6 +37,17 @@ public class BankAccountController {
     public BankAccountResponse getAccountById(@PathVariable Long id) {
         BankAccount account = bankAccountService.getAccountById(id);
         return toResponse(account);
+    }
+
+    @GetMapping("/customer/{customerId}")
+    public List<BankAccountResponse> getAccountsByCustomerId(
+            @PathVariable Long customerId) {
+
+        return bankAccountService
+            .getAccountsByCustomerId(customerId)
+            .stream()
+            .map(this::toResponse)
+            .toList();
     }
 
     private BankAccountResponse toResponse(BankAccount account) {
