@@ -1,0 +1,145 @@
+
+<div class="accounts-page">
+  <header class="page-header">
+    <div>
+      <h1>Bank Accounts</h1>
+      <p>Manage customer accounts and view account details.</p>
+    </div>
+  </header>
+
+  @if (!isAuthenticated) {
+    <section class="panel">
+      <h2>Sign In Required</h2>
+      <p>
+        Please sign in with your development credentials before
+        viewing or creating bank accounts.
+      </p>
+      <button type="button" (click)="goToSignIn()">
+        Go to Sign In
+      </button>
+    </section>
+  } @else {
+    <section class="panel">
+      <h2>Find Customer Accounts</h2>
+
+      <form (ngSubmit)="loadAccounts()">
+        <div class="form-group">
+          <label for="customerId">Customer ID</label>
+          <input
+            id="customerId"
+            name="customerId"
+            type="number"
+            min="1"
+            step="1"
+            [(ngModel)]="customerId"
+            placeholder="Enter customer ID"
+            required
+          />
+        </div>
+
+        <button type="submit" [disabled]="loading">
+          {{ loading ? 'Loading...' : 'View Accounts' }}
+        </button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Create Bank Account</h2>
+
+      <form (ngSubmit)="createAccount()">
+        <div class="form-group">
+          <label for="newAccountCustomerId">Customer ID</label>
+          <input
+            id="newAccountCustomerId"
+            name="newAccountCustomerId"
+            type="number"
+            min="1"
+            step="1"
+            [(ngModel)]="customerId"
+            placeholder="Enter existing customer ID"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="accountType">Account Type</label>
+          <select
+            id="accountType"
+            name="accountType"
+            [(ngModel)]="accountType"
+            required
+          >
+            <option value="SAVINGS">Savings Account</option>
+            <option value="CURRENT">Current Account</option>
+          </select>
+        </div>
+
+        <button type="submit" [disabled]="creating">
+          {{ creating ? 'Creating...' : 'Create Account' }}
+        </button>
+      </form>
+    </section>
+
+    @if (errorMessage) {
+      <div class="message error-message" role="alert">
+        {{ errorMessage }}
+      </div>
+    }
+
+    @if (successMessage) {
+      <div class="message success-message" role="status">
+        {{ successMessage }}
+      </div>
+    }
+
+    <section class="panel">
+      <h2>Account List</h2>
+
+      @if (loading) {
+        <p>Loading accounts...</p>
+      } @else if (accounts.length > 0) {
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Account ID</th>
+                <th>Account Number</th>
+                <th>Customer ID</th>
+                <th>Account Type</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Created At</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (account of accounts; track account.id) {
+                <tr>
+                  <td>{{ account.id }}</td>
+                  <td>{{ account.accountNumber }}</td>
+                  <td>{{ account.customerId }}</td>
+                  <td>{{ account.accountType }}</td>
+                  <td>{{ account.balance | number:'1.2-2' }}</td>
+                  <td>
+                    <span
+                      class="status"
+                      [class.active-status]="account.status === 'ACTIVE'"
+                      [class.closed-status]="account.status === 'CLOSED'"
+                    >
+                      {{ account.status }}
+                    </span>
+                  </td>
+                  <td>{{ account.createdAt | date:'medium' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="empty-state">
+          No accounts to display. Enter a customer ID and select
+          View Accounts to load the account list.
+        </p>
+      }
+    </section>
+  }
+</div>

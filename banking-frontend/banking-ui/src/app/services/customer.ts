@@ -1,3 +1,4 @@
+
 import { Injectable, inject } from '@angular/core';
 import {
   HttpClient,
@@ -47,7 +48,6 @@ export class CustomerService {
 
   /**
    * Stores development credentials in service memory.
-   * Call this after the user enters their credentials.
    */
   setCredentials(username: string, password: string): void {
     const token = btoa(`${username}:${password}`);
@@ -69,10 +69,9 @@ export class CustomerService {
   }
 
   /**
-   * Returns headers without throwing when credentials
-   * have not been entered yet.
+   * Returns authentication headers for other API services.
    */
-  private getHeaders(): HttpHeaders {
+  getAuthHeaders(): HttpHeaders {
     if (this.authorizationHeader) {
       return new HttpHeaders({
         Authorization: this.authorizationHeader
@@ -115,7 +114,7 @@ export class CustomerService {
 
       return this.http.get<CustomerPage>(this.apiUrl, {
         params,
-        headers: this.getHeaders()
+        headers: this.getAuthHeaders()
       }).pipe(
         catchError(
           (error: HttpErrorResponse) => this.handleError(error)
@@ -127,7 +126,7 @@ export class CustomerService {
   getCustomerById(id: number): Observable<Customer> {
     return this.requireCredentials(() =>
       this.http.get<Customer>(`${this.apiUrl}/${id}`, {
-        headers: this.getHeaders()
+        headers: this.getAuthHeaders()
       }).pipe(
         catchError(
           (error: HttpErrorResponse) => this.handleError(error)
@@ -141,7 +140,7 @@ export class CustomerService {
   ): Observable<Customer> {
     return this.requireCredentials(() =>
       this.http.post<Customer>(this.apiUrl, request, {
-        headers: this.getHeaders()
+        headers: this.getAuthHeaders()
       }).pipe(
         catchError(
           (error: HttpErrorResponse) => this.handleError(error)

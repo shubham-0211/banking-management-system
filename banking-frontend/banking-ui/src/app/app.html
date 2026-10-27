@@ -1,2 +1,25 @@
+<header class="main-header">
+  <div class="brand">BANKSPHERE</div>
 
-<router-outlet></router-outlet>
+  <nav class="main-nav">
+    <a [routerLink]="['/dashboard']"
+       routerLinkActive="active"
+       [routerLinkActiveOptions]="{ exact: true }">
+      Dashboard
+    </a>
+
+    <a [routerLink]="['/customers']"
+       routerLinkActive="active">
+      Customers
+    </a>
+
+    <a [routerLink]="['/accounts']"
+       routerLinkActive="active">
+      Bank Accounts
+    </a>
+  </nav>
+</header>
+
+<main class="main-content">
+  <router-outlet></router-outlet>
+</main>
