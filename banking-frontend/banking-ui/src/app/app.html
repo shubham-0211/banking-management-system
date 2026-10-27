@@ -1,21 +1,25 @@
 <header class="main-header">
-  <div class="brand">BANKSPHERE</div>
+  <div class="brand">BANKING MANAGEMENT</div>
 
   <nav class="main-nav">
-    <a [routerLink]="['/dashboard']"
-       routerLinkActive="active"
-       [routerLinkActiveOptions]="{ exact: true }">
+    <a
+      routerLink="/dashboard"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+    >
       Dashboard
     </a>
 
-    <a [routerLink]="['/customers']"
-       routerLinkActive="active">
+    <a routerLink="/customers" routerLinkActive="active">
       Customers
     </a>
 
-    <a [routerLink]="['/accounts']"
-       routerLinkActive="active">
+    <a routerLink="/accounts" routerLinkActive="active">
       Bank Accounts
+    </a>
+
+    <a routerLink="/transactions" routerLinkActive="active">
+      Transactions
     </a>
   </nav>
 </header>

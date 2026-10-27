@@ -1,4 +1,3 @@
-
 import { Injectable, inject } from '@angular/core';
 import {
   HttpClient,
@@ -43,36 +42,73 @@ export interface CustomerPage {
 export class CustomerService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = 'http://localhost:8080/api/customers';
+  private readonly storageKey = 'banking-dev-auth';
 
-  private authorizationHeader: string | null = null;
+  private authorizationHeader: string | null =
+    this.readStoredCredentials();
+
+  private readStoredCredentials(): string | null {
+    try {
+      if (typeof sessionStorage === 'undefined') {
+        return null;
+      }
+
+      return sessionStorage.getItem(this.storageKey);
+    } catch {
+      return null;
+    }
+  }
 
   /**
-   * Stores development credentials in service memory.
+   * Stores development credentials for the current browser tab.
    */
   setCredentials(username: string, password: string): void {
     const token = btoa(`${username}:${password}`);
     this.authorizationHeader = `Basic ${token}`;
+
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(
+          this.storageKey,
+          this.authorizationHeader
+        );
+      }
+    } catch {
+      // Keep credentials in service memory if storage is unavailable.
+    }
   }
 
   /**
-   * Clears the current in-memory authentication header.
+   * Clears the current authentication credentials.
    */
   clearCredentials(): void {
     this.authorizationHeader = null;
+
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem(this.storageKey);
+      }
+    } catch {
+      // Credentials are cleared from service memory.
+    }
   }
 
   /**
    * Checks whether credentials are currently stored.
    */
   hasCredentials(): boolean {
+    if (!this.authorizationHeader) {
+      this.authorizationHeader = this.readStoredCredentials();
+    }
+
     return this.authorizationHeader !== null;
   }
 
   /**
-   * Returns authentication headers for other API services.
+   * Returns authentication headers for API services.
    */
   getAuthHeaders(): HttpHeaders {
-    if (this.authorizationHeader) {
+    if (this.hasCredentials() && this.authorizationHeader) {
       return new HttpHeaders({
         Authorization: this.authorizationHeader
       });
@@ -88,7 +124,7 @@ export class CustomerService {
     request: () => Observable<T>
   ): Observable<T> {
     return new Observable<T>((subscriber) => {
-      if (!this.authorizationHeader) {
+      if (!this.hasCredentials()) {
         subscriber.error(
           new Error(
             'Please sign in with your development credentials first.'

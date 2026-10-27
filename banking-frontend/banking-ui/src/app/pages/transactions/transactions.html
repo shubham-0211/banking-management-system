@@ -1,0 +1,214 @@
+<div class="transactions-page">
+  <div class="page-header">
+    <div>
+      <h1>Transactions</h1>
+      <p>Manage deposits, withdrawals, transfers, and transaction history.</p>
+    </div>
+  </div>
+
+  <div class="alert success-alert" *ngIf="successMessage">
+    {{ successMessage }}
+  </div>
+
+  <div class="alert error-alert" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <section class="transaction-card">
+    <h2>Make a Transaction</h2>
+
+    <div *ngIf="loadingAccounts" class="loading-message">
+      Loading your accounts...
+    </div>
+
+    <div
+      *ngIf="!loadingAccounts && accounts.length === 0"
+      class="empty-message"
+    >
+      No bank accounts found. Please create or select an account first.
+    </div>
+
+    <form
+      *ngIf="!loadingAccounts && accounts.length > 0"
+      (ngSubmit)="submitTransaction()"
+    >
+      <div class="form-group">
+        <label for="accountId">Source Account</label>
+
+        <select
+          id="accountId"
+          name="accountId"
+          [(ngModel)]="selectedAccountId"
+          (ngModelChange)="onAccountChange()"
+          required
+        >
+          <option
+            *ngFor="let account of accounts"
+            [ngValue]="account.id"
+          >
+            Account #{{ account.id }}
+            <span *ngIf="account.accountNumber">
+              - {{ account.accountNumber }}
+            </span>
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="transactionType">Transaction Type</label>
+
+        <select
+          id="transactionType"
+          name="transactionType"
+          [(ngModel)]="transactionType"
+          required
+        >
+          <option value="DEPOSIT">Deposit</option>
+          <option value="WITHDRAWAL">Withdraw</option>
+          <option value="TRANSFER">Transfer</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="amount">Amount</label>
+
+        <input
+          id="amount"
+          name="amount"
+          type="number"
+          [(ngModel)]="amount"
+          min="0.01"
+          step="0.01"
+          placeholder="Enter amount"
+          required
+        />
+      </div>
+
+      <div class="form-group" *ngIf="transactionType === 'TRANSFER'">
+        <label for="destinationAccountId">Destination Account</label>
+
+        <select
+          id="destinationAccountId"
+          name="destinationAccountId"
+          [(ngModel)]="destinationAccountId"
+          required
+        >
+          <option [ngValue]="null" disabled>
+            Select destination account
+          </option>
+
+          <option
+            *ngFor="let account of accounts"
+            [ngValue]="account.id"
+            [disabled]="account.id === selectedAccountId"
+          >
+            Account #{{ account.id }}
+            <span *ngIf="account.accountNumber">
+              - {{ account.accountNumber }}
+            </span>
+          </option>
+        </select>
+      </div>
+
+      <button
+        type="submit"
+        [disabled]="submitting || accounts.length === 0"
+      >
+        <span *ngIf="!submitting">Submit Transaction</span>
+        <span *ngIf="submitting">Processing...</span>
+      </button>
+    </form>
+  </section>
+
+  <section class="history-card">
+    <div class="history-header">
+      <div>
+        <h2>Transaction History</h2>
+        <p>{{ totalElements }} transaction(s) found</p>
+      </div>
+
+      <button
+        type="button"
+        class="refresh-button"
+        (click)="loadHistory()"
+        [disabled]="loadingHistory || selectedAccountId === null"
+      >
+        Refresh
+      </button>
+    </div>
+
+    <div *ngIf="loadingHistory" class="loading-message">
+      Loading transaction history...
+    </div>
+
+    <div
+      *ngIf="!loadingHistory && transactions.length === 0"
+      class="empty-message"
+    >
+      No transactions found for this account.
+    </div>
+
+    <div
+      *ngIf="!loadingHistory && transactions.length > 0"
+      class="table-container"
+    >
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Description</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr
+            *ngFor="let transaction of transactions; trackBy: trackTransaction"
+          >
+            <td>{{ transaction.id }}</td>
+            <td>{{ transaction.transactionType }}</td>
+            <td>{{ transaction.amount | number: '1.2-2' }}</td>
+            <td>
+              <span
+                class="status-badge"
+                [class.status-success]="transaction.status === 'SUCCESS'"
+                [class.status-failed]="transaction.status === 'FAILED'"
+              >
+                {{ transaction.status }}
+              </span>
+            </td>
+            <td>{{ transaction.description || '-' }}</td>
+            <td>
+              {{ transaction.createdAt | date: 'medium' }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination" *ngIf="totalPages > 0">
+      <button
+        type="button"
+        (click)="previousPage()"
+        [disabled]="currentPage === 0 || loadingHistory"
+      >
+        Previous
+      </button>
+
+      <span>
+        Page {{ currentPage + 1 }} of {{ totalPages }}
+      </span>
+
+      <button
+        type="button"
+        (click)="nextPage()"
+        [disabled]="currentPage + 1 >= totalPages || loadingHistory"
+      >
+        Next
+      </button>
+    </div>
+  </section>
+</div>
