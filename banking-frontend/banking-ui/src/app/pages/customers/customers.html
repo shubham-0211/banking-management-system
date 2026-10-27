@@ -1,0 +1,270 @@
+@if (!isAuthenticated) {
+  <section class="customers-page">
+    <section class="panel login-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">BANKSPHERE · SECURE ACCESS</p>
+          <h1>Customer Management Login</h1>
+          <p>Sign in to access customer records.</p>
+        </div>
+      </div>
+
+      @if (errorMessage) {
+        <div class="message error" role="alert">
+          {{ errorMessage }}
+        </div>
+      }
+
+      <form (ngSubmit)="login()" #loginForm="ngForm">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="username">Username</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              [(ngModel)]="username"
+              required
+              autocomplete="username"
+              placeholder="Enter username"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="password">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              [(ngModel)]="password"
+              required
+              autocomplete="current-password"
+              placeholder="Enter development password"
+            />
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button
+            type="submit"
+            [disabled]="loggingIn || loginForm.invalid">
+            {{ loggingIn ? 'Signing in...' : 'Sign in' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </section>
+} @else {
+  <section class="customers-page">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">CUSTOMER MANAGEMENT</p>
+        <h1>Customers</h1>
+        <p class="subtitle">
+          Register customers and manage their basic details.
+        </p>
+      </div>
+
+      <div class="customer-count">
+        <span>Total customers</span>
+        <strong>{{ totalElements }}</strong>
+      </div>
+    </header>
+
+    <div class="form-actions">
+      <span>Signed in as {{ username }}</span>
+      <button type="button" class="secondary-button" (click)="logout()">
+        Sign out
+      </button>
+    </div>
+
+    @if (successMessage) {
+      <div class="message success" role="status">
+        {{ successMessage }}
+      </div>
+    }
+
+    @if (errorMessage) {
+      <div class="message error" role="alert">
+        {{ errorMessage }}
+      </div>
+    }
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Register a customer</h2>
+          <p>Enter the customer's information below.</p>
+        </div>
+      </div>
+
+      <form
+        #customerForm="ngForm"
+        (ngSubmit)="registerCustomer(customerForm)"
+        novalidate>
+
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="fullName">Full name <span>*</span></label>
+            <input
+              id="fullName"
+              name="fullName"
+              type="text"
+              [(ngModel)]="form.fullName"
+              #fullName="ngModel"
+              required
+              maxlength="100"
+              placeholder="Enter full name"
+              autocomplete="name"
+            />
+
+            @if (fullName.invalid && fullName.touched) {
+              <small class="field-error">
+                Full name is required (maximum 100 characters).
+              </small>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="email">Email address <span>*</span></label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              [(ngModel)]="form.email"
+              #email="ngModel"
+              required
+              email
+              maxlength="150"
+              placeholder="customer@example.com"
+              autocomplete="email"
+            />
+
+            @if (email.invalid && email.touched) {
+              <small class="field-error">
+                Enter a valid email address.
+              </small>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="phone">Phone number</label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              [(ngModel)]="form.phone"
+              #phone="ngModel"
+              maxlength="20"
+              placeholder="Enter phone number"
+              autocomplete="tel"
+            />
+
+            @if (phone.invalid && phone.touched) {
+              <small class="field-error">
+                Phone cannot exceed 20 characters.
+              </small>
+            }
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <p class="required-note"><span>*</span> Required fields</p>
+          <button type="submit" [disabled]="submitting">
+            {{ submitting ? 'Registering...' : 'Register customer' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading list-heading">
+        <div>
+          <h2>Customer directory</h2>
+          <p>Customer records retrieved from the banking backend.</p>
+        </div>
+
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="loadCustomers(currentPage)"
+          [disabled]="loading">
+          {{ loading ? 'Loading...' : 'Refresh list' }}
+        </button>
+      </div>
+
+      @if (loading && customers.length === 0) {
+        <div class="empty-state">Loading customer records...</div>
+      } @else if (customers.length === 0 && !errorMessage) {
+        <div class="empty-state">
+          <strong>No customers found</strong>
+          <p>Register your first customer using the form above.</p>
+        </div>
+      } @else if (customers.length > 0) {
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Customer ID</th>
+                <th>Full name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (customer of customers; track customer.id) {
+                <tr>
+                  <td class="customer-id">#{{ customer.id }}</td>
+                  <td class="customer-name">{{ customer.fullName }}</td>
+                  <td>{{ customer.email }}</td>
+                  <td>{{ customer.phone || '—' }}</td>
+                  <td>
+                    <span
+                      class="status"
+                      [class.active]="customer.status === 'ACTIVE'">
+                      {{ customer.status }}
+                    </span>
+                  </td>
+                  <td>
+                    {{
+                      customer.createdAt
+                        ? (customer.createdAt | date:'dd MMM yyyy')
+                        : '—'
+                    }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="pagination">
+          <span>
+            Page {{ currentPage + 1 }} of {{ totalPages || 1 }}
+            · {{ totalElements }} customer(s)
+          </span>
+
+          <div class="pagination-actions">
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="previousPage()"
+              [disabled]="currentPage === 0 || loading">
+              Previous
+            </button>
+
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="nextPage()"
+              [disabled]="currentPage + 1 >= totalPages || loading">
+              Next
+            </button>
+          </div>
+        </footer>
+      }
+    </section>
+  </section>
+}
