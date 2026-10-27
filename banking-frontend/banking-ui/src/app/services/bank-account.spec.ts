@@ -1,12 +1,16 @@
 import { TestBed } from '@angular/core/testing';
-import { BankAccount } from './bank-account';
+import { provideHttpClient } from '@angular/common/http';
+import { BankAccountService } from './bank-account';
 
-describe('BankAccount', () => {
-  let service: BankAccount;
+describe('BankAccountService', () => {
+  let service: BankAccountService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(BankAccount);
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient()]
+    });
+
+    service = TestBed.inject(BankAccountService);
   });
 
   it('should be created', () => {
