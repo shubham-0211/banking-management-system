@@ -62,6 +62,13 @@ export class CustomerService {
   }
 
   /**
+   * Checks whether credentials are currently stored.
+   */
+  hasCredentials(): boolean {
+    return this.authorizationHeader !== null;
+  }
+
+  /**
    * Returns headers without throwing when credentials
    * have not been entered yet.
    */

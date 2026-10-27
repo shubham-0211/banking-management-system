@@ -211,15 +211,23 @@
                 <th>Phone</th>
                 <th>Status</th>
                 <th>Created</th>
+                <th>Actions</th>
               </tr>
             </thead>
+
             <tbody>
               @for (customer of customers; track customer.id) {
                 <tr>
                   <td class="customer-id">#{{ customer.id }}</td>
-                  <td class="customer-name">{{ customer.fullName }}</td>
+
+                  <td class="customer-name">
+                    {{ customer.fullName }}
+                  </td>
+
                   <td>{{ customer.email }}</td>
+
                   <td>{{ customer.phone || '—' }}</td>
+
                   <td>
                     <span
                       class="status"
@@ -227,12 +235,22 @@
                       {{ customer.status }}
                     </span>
                   </td>
+
                   <td>
                     {{
                       customer.createdAt
                         ? (customer.createdAt | date:'dd MMM yyyy')
                         : '—'
                     }}
+                  </td>
+
+                  <td>
+                    <button
+                      type="button"
+                      class="secondary-button"
+                      (click)="viewCustomerDetails(customer.id)">
+                      View Details
+                    </button>
                   </td>
                 </tr>
               }

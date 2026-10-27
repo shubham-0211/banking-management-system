@@ -1,6 +1,12 @@
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  OnInit,
+  inject
+} from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import {
   Customer,
@@ -15,9 +21,10 @@ import {
   templateUrl: './customers.html',
   styleUrl: './customers.css'
 })
-export class Customers {
+export class Customers implements OnInit {
   private readonly customerService = inject(CustomerService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
 
   customers: Customer[] = [];
   currentPage = 0;
@@ -41,6 +48,17 @@ export class Customers {
     email: '',
     phone: ''
   };
+
+  /**
+   * Restores the signed-in state when returning
+   * to the Customers page.
+   */
+  ngOnInit(): void {
+    if (this.customerService.hasCredentials()) {
+      this.isAuthenticated = true;
+      this.loadCustomers(0);
+    }
+  }
 
   login(): void {
     if (this.loggingIn || !this.username.trim() || !this.password) {
@@ -168,6 +186,10 @@ export class Customers {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  viewCustomerDetails(customerId: number): void {
+    this.router.navigate(['/customers', customerId]);
   }
 
   previousPage(): void {
